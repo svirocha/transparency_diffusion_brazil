@@ -1,0 +1,234 @@
+---
+title: "script_Ch1.Rmd"
+author: "Rocha, Virginia"
+date: "11/30/2019"
+output: finalsample.Rda and finalsample.csv
+---
+
+## Purpose
+
+This script focus on building a dataframe to support the first chapter of my PhD dissertation. It was made based on 3 dataframes: qualisample (which adresses political dynasties in 90 municipalities qualitatively classified by me through descriptive reports and in depth interviews); Transp20142 (from Batista, 2017 with data on Acces to Information Law in Brazilian Municipalities and other infos from IBGE); Codigos (from Domingos, 2016 with two IBGE codes which have 7 and 6 numbers. It was used to merge qualisample and Transp20142, which used different IBGE codes). 
+
+## Prepare R environment and load packages
+
+```{r, echo=FALSE}
+rm(list = ls()) #clean global environment
+```
+
+Set root directory
+```{r setup, include=FALSE, echo=FALSE}
+require("knitr") #load knitr package
+opts_knit$set(root.dir = "/Users/vrroc/") #set root directory
+getwd() #check working directory
+```
+
+```{r, echo=FALSE}
+library(Hmisc); library(ggplot2); library(tidyverse) #load packages
+```
+
+## Visualize and Transform Data
+
+Visualize data
+```{r, echo=FALSE}
+qualisample <- read.csv("C:/Users/vrroc/Desktop/qualisample.csv") #load dataset
+View(qualisample)
+```
+
+```{r}
+ls(qualisample) #list variables in dataset
+str(qualisample) #check dataset's structure
+```
+
+Transform integer variables into factor ones
+```{r, echo=FALSE}
+qualisample[,'divisao_fam']<-factor(qualisample[,'divisao_fam'])
+qualisample[,'dinastia']<-factor(qualisample[,'dinastia'])
+qualisample[,'dinastia2008']<-factor(qualisample[,'dinastia2008'])
+qualisample[,'dinastia2012']<-factor(qualisample[,'dinastia2012'])
+qualisample[,'dinastia2016']<-factor(qualisample[,'dinastia2016'])
+qualisample[,'transp_dispositive']<-factor(qualisample[,'transp_dispositive'])
+```
+
+Check if the transfortation worked
+```{r}
+str(qualisample) #check dataset's structure again
+is.factor(qualisample$dinastia2012) #check if dinastia2012 is factor (true)
+levels(qualisample$dinastia2012) #check levels of dummy variable dinastia2012
+```
+
+Get descriptive statistics of Margim of Victory in 2012 (margvit_2012) to create new categorical variables based on it
+```{r}
+describe(qualisample$margvit_12) #get descriptive statistics for margvit_12
+# n, nmiss, unique, mean, 5,10,25,50,75,90,95th percentiles
+# 5 lowest and 5 highest scores
+median(qualisample$margvit_12) #get median value
+hist(qualisample$margvit_12) #histogram for margin of victory in 2012
+```
+
+## Create new variables and add them to original dataframe
+
+Create dummy variable "electoralcomp" from continuous variable "margvit_12"
+```{r}
+electoralcomp1 <- ifelse(qualisample$margvit_12 < 9.430, 1,0)
+electoralcomp1 #print electoralcomp1
+```
+
+Add electoralcomp1 to dataframe
+```{r, echo=FALSE}
+qualisample <- cbind(qualisample, electoralcomp1, deparse.level = 1)
+View(qualisample)
+```
+
+
+Create categorical variable "dynasticomp" with conditionals to merge "electoralcomp1" and "dinastia2012"
+```{r, echo=FALSE}
+dynasticomp <- ifelse(qualisample$electoralcomp1 == 1 & qualisample$dinastia2012 == 0, 1, 
+       ifelse(qualisample$electoralcomp1 == 1 & qualisample$dinastia2012 == 1, 2,
+              ifelse(qualisample$electoralcomp1 == 0 & qualisample$dinastia2012 == 0, 3,
+                     ifelse(qualisample$electoralcomp1 == 0 & qualisample$dinastia2012 == 1, 4, 0)
+                     )
+              )
+       )
+dynasticomp #print dynasticomp
+```
+
+Add dynasticomp to dataframe
+```{r, echo=FALSE}
+qualisample <- cbind(qualisample, dynasticomp, deparse.level = 1)
+View(qualisample)
+```
+
+## Check observations for dynasties and electoral competition in 2012
+
+```{r}
+table(qualisample$dinastia2012) # counts for dynasties in 2012 categories
+table(qualisample$electoralcomp) # counts for electoral competitiveness in 2012 categories)
+```
+
+## Merge dataframes
+
+Merge dataframe by IBGE code
+```{r, echo=FALSE}
+codigos <- read.csv2("C:/Users/vrroc/Desktop/codigos.csv") #load codigos dataframe
+```
+
+First, we need to merge qualisimple with a code dataframe with to IBGE code types
+```{r, echo=FALSE}
+#rename column to equal qualisample's name
+codigos <- rename(codigos, codeibge = c("CODIBGE7")) 
+codedata <- merge(qualisample,codigos,by="codeibge") #merge dataframes
+View(codedata)
+```
+
+Then, merge it with a dataframe on transparency
+```{r, echo=FALSE}
+load("C:/Users/vrroc/Desktop/transp20142.Rda") #load dataframe
+#rename column CODIBGE5 to match with 'transp20142' name 'IBGE6'
+codedata <- rename(codedata, IBGE6 = c("CODIBGE5"))
+View(codedata)
+```
+
+Finally, merge codedata with transp20142
+```{r, echo=FALSE}
+datamerge <- merge(codedata,transp20142,by="IBGE6")
+View(datamerge)
+```
+
+## Clean dataframe
+
+```{r, echo=FALSE}
+finalsample = subset(datamerge, select = -c(margvit_08,margvit_16,firstplace,
+                                            secondplace,UF,NomeMunicipio,
+                                            UF.x,A1,A1027,Estado.x,ESTAD0,ESTAD1,ESTAD2) )
+View(finalsample)
+```
+
+## Save dataframe 
+
+As R data
+```{r, echo=FALSE}
+save(finalsample, file = "C:/Users/vrroc/Desktop/finalsample.Rda")
+load("C:/Users/vrroc/Desktop/finalsample.Rda")
+View(finalsample)
+```
+
+As comma separated values data
+```{r, echo=FALSE}
+write.csv(finalsample, file = "C:/Users/vrroc/Desktop/finalsample.csv")
+load("C:/Users/vrroc/Desktop/finalsample.csv")
+View(finalsample)
+```
+
+## Explore data
+
+Get cross classication counts for dinasties by electoral competition with new data
+```{r}
+table(finalsample$`electoralcomp1`, finalsample$dinastia2012)
+```
+
+Histograms
+```{r}
+hist(finalsample$EfetividadeIBGE) 
+hist(finalsample$NotaEBT)
+```
+
+Scatterplot between margin of victory in 2012 and LAI effectiveness from IBGE (EfetividadeIBGE) and CGU (NotaEBT) data
+
+```{r}
+#scatterplot between margin of victory and LAI effectiveness from IBGE
+x <- finalsample$margvit_12
+y <- finalsample$EfetividadeIBGE
+plot(x, y, main = "Scatter plot",
+     xlab = "margin of victory in 2012", ylab = "LAI's Effectiveness",
+     pch = 19, frame = FALSE)
+abline(lm(y ~ x, data = finalsample), col = "blue")
+
+#scatterplot between margin of victory and LAI effectiveness from EBT
+x <- finalsample$margvit_12
+y <- finalsample$NotaEBT
+plot(x, y, main = "Scatter plot",
+     xlab = "margin of victory in 2012", ylab = "LAI's Effectiveness",
+     pch = 19, frame = FALSE)
+abline(lm(y ~ x, data = finalsample), col = "blue")
+
+```
+
+Scatterplot between dynasty in 2012 and LAI effectiveness from IBGE (EfetividadeIBGE) and CGU (NotaEBT) data
+
+```{r}
+#scatterplot between dynasty in 2012 and LAI effectiveness from IBGE
+x <- finalsample$dinastia2012
+y <- finalsample$EfetividadeIBGE
+plot(x, y, main = "Scatter plot",
+     xlab = "dynastic mayor in 2012", ylab = "LAI's Effectiveness",
+     pch = 19, frame = FALSE)
+abline(lm(y ~ x, data = finalsample), col = "blue")
+
+#scatterplot between dynasty in 2012 and LAI effectiveness from EBT
+x <- finalsample$dinastia2012
+y <- finalsample$NotaEBT
+plot(x, y, main = "Scatter plot",
+     xlab = "dynastic mayor in 2012", ylab = "LAI's Effectiveness",
+     pch = 19, frame = FALSE)
+abline(lm(y ~ x, data = finalsample), col = "blue")
+```
+
+Scatterplot between dynasticomp (matrix among dynasties and electoral competition) and LAI effectiveness from IBGE (EfetividadeIBGE) and CGU (NotaEBT) data
+
+```{r}
+#scatterplot between dynastiesxcompetition in 2012 and LAI effectiveness from IBGE
+x <- finalsample$dynasticomp
+y <- finalsample$EfetividadeIBGE
+plot(x, y, main = "Scatter plot",
+     xlab = "competetiveness and dynasties in 2012", ylab = "LAI's Effectiveness",
+     pch = 19, frame = FALSE)
+abline(lm(y ~ x, data = finalsample), col = "blue")
+
+#scatterplot between dynastiesxcompetition in 2012 and LAI effectiveness from EBT
+x <- finalsample$dynasticomp
+y <- finalsample$NotaEBT
+plot(x, y, main = "Scatter plot",
+     xlab = "competetiveness and dynasties in 2012", ylab = "LAI's Effectiveness",
+     pch = 19, frame = FALSE)
+abline(lm(y ~ x, data = finalsample), col = "blue")
+```
