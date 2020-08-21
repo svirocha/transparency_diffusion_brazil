@@ -1,0 +1,66 @@
+---
+title: "analysis_ch2.Rmd"
+author: "Rocha, Virginia"
+date: "12/09/2019"
+output: 
+---
+
+## Purpose
+
+Perform data analysis to test my dissertation's hypothesis. 
+
+## Prepare R environment and load packages
+
+
+```{r, echo=FALSE}
+rm(list = ls()) #clean global environment
+```
+
+Set root directory
+```{r setup, include=FALSE, echo=FALSE}
+require("knitr") #load knitr package
+opts_knit$set(root.dir = "/Users/vrroc/") #set root directory
+getwd() #check working directory
+```
+
+```{r, echo=FALSE}
+library(gplots) ; library(graphics) ;  library(stargazer) ; library(ggplot2) ; library(jtools) ; library(ggeffects) ; library(interactions) ; library(survival) ; library(brazilmaps) ; library(ggpubr)
+#load packages
+```
+
+##load dataframe
+
+```{r, echo=FALSE}
+load("C:/Users/vrroc/Desktop/TranspSobrevComp.Rda")
+```
+
+## Visualize dataframe
+
+```{r, echo=FALSE}
+View(transpc)
+ls(transpc) #list variables in dataset
+str(transpc) #check dataset's structure
+```
+## splitnames to match them and classify dynastic candidates
+First, we transform 'Candidato' from factor to character and check if it worked (otherwise 'strsplit' will not work). We then split the names which are separated by space using 'strsplit' function. Then we create colunms for each name according to its position. We bind these colunms to our original dataframe, which I rename 'transpc1'. Finally, we substitute empty cells for NA with 'gsub' function.
+
+```{r, echo=FALSE}
+transpc$Candidato <- as.character(transpc$Candidato)
+str(transpc$Candidato)
+
+split <- strsplit((transpc$Candidato), " ")
+split
+
+firstname <- sapply(split, "[", 1)
+secondname <- sapply(split, "[", 2)
+thirdname <- sapply(split, "[", 3)
+fourthname <- sapply(split, "[", 4)
+lastname <- sapply(split, "[", 5)
+
+transpc1 <- cbind(firstname, secondname, thirdname, fourthname, lastname, transpc)
+View(transpc1)
+```
+
+
+
+
